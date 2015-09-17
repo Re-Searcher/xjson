@@ -132,6 +132,7 @@ class JSONLDContext(object):
                 return merge_namespace_and_tag('{{{0}}}{1}'.format(
                                                 namespace, localname))
             else:
+                import pdb; pdb.set_trace()
                 raise err
 
     def __setitem__(self, tag, context):

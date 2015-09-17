@@ -168,7 +168,7 @@ class XJson(object):
         return self.findall(query, unwrap=True)
 
     @classmethod
-    def from_xml(cls, xml, namspace_handling='shorten'):
+    def from_xml(cls, xml, namespace_handling=None):
         """ Read some XML containing a xjson record
 
             Parameters:
@@ -179,6 +179,9 @@ class XJson(object):
             Returns:
                 the new XJson instance containing the record
         """
+        if namespace_handling is None:
+            namespace_handling = 'shorten'
+
         # Initialize tree and XML namespaces
         if not isinstance(xml, io.IOBase):
             try:
@@ -189,8 +192,8 @@ class XJson(object):
 
         # Parse xjson using JSON mapping
         parser = etree.XMLParser(
-            target=JSONTarget(namespace_handling=namespace_handling))
-        result, context = etree.XML(fhandle.read(), parser)
+            target=JSONLDTarget(namespace_handling=namespace_handling))
+        result, context = etree.XML(xml.read(), parser)
         return cls(body, context)
 
     @property

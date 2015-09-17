@@ -115,9 +115,9 @@ class JSONLDTarget(object):
                 elem = elem[contained_type]
 
                 # Move container out to context (if it hasn't already)
-                if isinstance(self.context[tag], str):
-                    self.context[tag] = {'@id': self.context[container_type],
-                                         '@type': self.context[contained_type],
+                if isinstance(tag, str):
+                    self.context[tag] = {'@id': container_type,
+                                         '@type': contained_type,
                                          '@container': '@set'}
 
             # We can also check whether we have a URL as an attribute
