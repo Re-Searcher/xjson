@@ -1,15 +1,15 @@
-""" file:   test_metadata.py
+""" file:   test.xjson.py
     author: Jess Robertson
             CSIRO Earth Science and Resource Engineering
     date:   Tuesday 2 May, 2015
 
-    description: Tests for metadata class
+    description: Tests for.xjson class
 """
 
 from __future__ import print_function, division
 
 from xjson.webservices import nvcl
-from xjson.metadata import xml_to_metadata
+from xjson import XJson
 
 import unittest
 import httmock
@@ -18,7 +18,7 @@ import requests
 from mocks.resource import mock_resource
 
 
-class TestMetadata(unittest.TestCase):
+class TestXJson(unittest.TestCase):
 
     def setUp(self):
         # Get a pointer to the NVCL endpoint registry
@@ -40,19 +40,19 @@ class TestMetadata(unittest.TestCase):
         """
         self.assertIsNotNone(self.response.content)
 
-    def test_metadata_length(self):
-        """ Check that the metadata conversion results in the right number of
+    def test_xjson_length(self):
+        """ Check that the.xjson conversion results in the right number of
             items.
         """
-        mdata = xml_to_metadata(self.response.content)
+        mdata = XJson.from_xml(self.response.content)
         bh_elems = mdata.xpath('.//nvcl:scannedBorehole')
         self.assertTrue(len(list(mdata.yaml())) > 10)
         self.assertTrue(len(bh_elems) > 0)
 
-    def test_metadata_queries(self):
+    def test_xjson_queries(self):
         """ Check that queries can run multiple times and get the same results
         """
-        mdata = xml_to_metadata(self.response.content)
+        mdata = XJson.from_xml(self.response.content)
         elems = mdata['.//nvcl:scannedBorehole']
         self.assertTrue(len(elems) > 0)
         elems2 = mdata['.//nvcl:scannedBorehole']

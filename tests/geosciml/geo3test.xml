@@ -21,7 +21,7 @@
 
     <!-- ================================================================================================================       -->
     <!--        Testbed4 - GeoSciML v3 Release Candidate 3                                                                                                                                  -->
-    <!--        Handcrafted Borehole Class instance document - GTK - metadata info for INSPIRE                                                                  -->
+    <!--        Handcrafted Borehole Class instance document - GTK -.xjson info for INSPIRE                                                                  -->
     <!--            Document version: 1.0                                                                                                                                       -->
     <!--        Author: Jouni Vuollo, GTK (jouni.vuollo@gtk.fi)                                                                                                                                                     -->
     <!-- ================================================================================================================       -->
@@ -141,8 +141,8 @@
                         </gml:LineString>
                     </gsml:shape>
                     <gsml:specification xlink:href="#someGeologicUnitURI_alreadyDefinedInTheSampledFeatureList"/>
-                    <gsml:metadata> <!-- if you want to enrich the log with some metadata -->
-                        <gmd:MD_Metadata>
+                    <gsml.xjson> <!-- if you want to enrich the log with some.xjson -->
+                        <gmd:MD_XJson>
                             <gmd:contact/>
                             <gmd:dateStamp/>
                             <gmd:identificationInfo>
@@ -152,8 +152,8 @@
                                     <gmd:language/>
                                 </gmd:MD_DataIdentification>
                             </gmd:identificationInfo>
-                        </gmd:MD_Metadata>
-                    </gsml:metadata>
+                        </gmd:MD_XJson>
+                    </gsml.xjson>
                 </gsmlbh:MappedInterval>
             </gsmlbh:logElement>
         </gsmlbh:Borehole>

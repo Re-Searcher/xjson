@@ -29,11 +29,11 @@ from tests.mocks.update import UpdateMocks
 
 ## PACKAGE INFORMATION
 setup(
-    # Metadata
+    # XJson
     name='xjson',
     version=get_version(),
     description='XML and JSON, without the heartbutn',
-    long_description=read('README.rst'),
+    long_description='making something good here',
     author='Jess Robertson',
     author_email='jesse.robertson@csiro.au',
     url='http://github.com/jesserobertson/xjson',
@@ -59,7 +59,7 @@ setup(
     # Contents
     packages=find_packages(exclude=['test*']),
     package_data={
-        'xjson.metadata': ['*.json'],
+        'xjson.xjson': ['*.json'],
     },
     test_suite='tests',
     cmdclass={

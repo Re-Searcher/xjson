@@ -1,4 +1,4 @@
-""" file:   metadata.py (xjson.metadata)
+""" file:  xjson.py (pysiss xjson)
     author: Jess Robertson
             CSIRO Minerals Resources Flagship
     date:   Wednesday 27 August, 2014
@@ -11,9 +11,11 @@
 
 from __future__ import print_function, division
 
-from .registry import MetadataRegistry
+from .registry import XJsonRegistry
 from .namespaces import NamespaceMap
 from .xjson_namespace import XJSON_NAMESPACE
+from .json_target import JSONLDTarget
+from .json_context import JSONLDContext
 
 from lxml import etree
 import io
@@ -29,99 +31,71 @@ def qname_str(qname):
         result = '{0}'.format(qname.localname)
     return result
 
-
-def yamlify(mdata, nsmap, indent_width=2, indent=0):
-    """ Convert an ETree instance into a YAML-esque representation
-
-        Parameters
-            mdata - an Metadata instance
-            indent_width - with of a single indent step in characters
-            indent - initial number of indentations
-    """
-    # Build line for current element
-    spaces = ' ' * indent_width * indent
-    result = spaces + qname_str(nsmap.shorten(mdata.tag))
-
-    # Add lines for text
-    if mdata.text and mdata.text.strip() != '':
-        result += ' {0}'.format(mdata.text)
-
-    # ... and metadata
-    if mdata.attrib:
-        for key in mdata.attrib.keys():
-            qname = qname_str(nsmap.shorten(key))
-            result += '\n' + spaces + ' ' * indent_width + \
-                      '@{0}: {1}'.format(qname, mdata.attrib[key])
-
-    # Add lines for children
-    result += '\n'
-    for child in mdata.getchildren():
-        result += yamlify(child, nsmap,
-                          indent_width=indent_width,
-                          indent=indent + 1)
-    return result
-
-
-def xml_to_metadata(xml):
-    """ Read some XML containing a metadata record
-
-        Parameters:
-            xml - either a handle to an open xml file, or a string of XML
+def get_children(self):
+    """ Return the children nodes from the xjson tree
 
         Returns:
-            the new Metadata instance containing the record
+            an iterator over the children, or None if there are no
+            children
     """
-    # Initialize tree and XML namespaces
-    if not isinstance(xml, io.IOBase):
-        try:
-            xml = io.BytesIO(xml.encode('utf-8'))
-        except AttributeError:
-            # We already have a bytestring so don't bother encoding it
-            xml = io.BytesIO(xml)
-    nspace = NamespaceMap()
-
-    # Walk tree and generate parsing events to normalize tags
-    elem = None
-    context = iter(etree.iterparse(xml, events=('start-ns',), 
-                                   remove_comments=True,
-                                   recover=True))
-    for event, elem in context:
-        # start-ns elem is a tuple with a key and url
-        # We don't care about the key
-        nspace.add_from_uri(elem[1])
-
-    # Return the results if we have em
-    if context.root is not None:
-        return Metadata(elem=context.root, namespaces=nspace)
+    child_keys = [k for k in self.keys()
+                  if not any(k.startswith(c) for c in ('@', '#'))]
+    if child_keys:
+        return ((k, self[k]) for k in child_keys)
     else:
-        raise ValueError("Couldn't parse xml")
+        return None
 
+def yamlify(xjson, indent_width=2):
+    """ Convert a xjson tree to 'yaml' format
 
-def as_metadata(obj):
-    """ Convert the given object to a Metadata instance
-
-        Parameters:
-            obj - the object to be converted. obj can be a string containing 
-            some xml, a handle to an open file, or an lxml element or elementtree 
-            instance. If object is already a Metadata instance, it is just returned.
-
-        Returns:
-            a Metadata instance
+        Parameterts:
+            xjson - a XJson instance
+            intent_width - width of a single indent step in characters
     """
-    # Just return if we're already a metadata object
-    if isinstance(Metadata, obj):
-        return obj
-    elif isinstance((io.IOBase, string), obj):
-        return xml_to_metadata(obj)
-    elif isinstance(lxml._Element):
-        return Metadata(elem=obj)
-    elif isinstance(lxml._ElementTree):
-        return Metadata(elem=obj.root)
+    def _emit_yaml(key, body, indent):
+        """ Function to emit YAML for one element at a time
+        """
+        # Sort out indentation
+        spaces = ' ' * indent_width * indent
+        new_item = '\n' + spaces + ' ' * indent_width
+
+        # Build line for current element
+        result = '\n' + spaces + key + ':'
+        if isinstance(body, dict):
+            # Add data and attributes
+            if '#data' in body.keys():
+                result += ' {0}'.format(body['#data'])
+                result += '\n'
+            if '#attributes' in body.keys():
+                for item in body['#attributes'].items():
+                    result += new_item + '@{0}: {1}'.format(*item)
+
+            # Add lines for children recursively
+            children = get_children(body)
+            if children:
+                for tag, child in children:
+                    result += _emit_yaml(tag, child, indent + 1)
+
+        elif isinstance(body, str):
+            result += ' ' + body
+
+        elif body is None:
+            result += ' None'
+
+        else:
+            result += ' [' + new_item \
+                + new_item.join(str(b) for b in body) \
+                + new_item + ']'
+
+        # Return result
+        return result
+
+    return '\n'.join([_emit_yaml(*it, indent=0) for it in xjson.items()])
 
 
-class Metadata(object):
+class XJson(object):
 
-    """ Class to store metadata record
+    """ Class to store xjson record
 
         Can be initialized with an lxml.Element instance, or with a tag.
 
@@ -132,20 +106,20 @@ class Metadata(object):
             elem - either an etree.ElementTree or etree.Element instance
                 containing already-parsed data. Optional, but one of 'xml' or
                 tree must be specified.
-            tag - the tag for the metadata. Optional, if not specified
-                the tag of the root of the metadata tree will be used. If both
+            tag - the tag for the.xjson. Optional, if not specified
+                the tag of the root of the.xjson tree will be used. If both
                 elem and tag are specified and elem.tag != tag, a ValueError
                 will be raised.
-            **kwargs - arbitrary attributes to attach to the metadata instance
+            **kwargs - arbitrary attributes to attach to the.xjson instance
     """
 
-    registry = MetadataRegistry()
+    registry = XJsonRegistry()
 
-    def __init__(self, elem=None, tag=None, 
+    def __init__(self, elem=None, tag=None,
                  text=None, namespaces=None, **attributes):
-        super(Metadata, self).__init__()
+        super(XJson, self).__init__()
         self.uuid = uuid.uuid5(uuid.NAMESPACE_DNS,
-                               XJSON_NAMESPACE + 'metadata')
+                               XJSON_NAMESPACE + 'xjson')
         self.ident = self.uuid
         self._namespaces = namespaces or NamespaceMap()
         self._update_namespaces = True
@@ -160,7 +134,7 @@ class Metadata(object):
         else:
             raise ValueError(
                 'You need to specify one of the tag or elem arguments to'
-                'construct a Metadata instance')
+                'construct a XJson instance')
 
         # Update other values
         if text:
@@ -177,11 +151,10 @@ class Metadata(object):
         for qmethod in ('xpath', 'find', 'findall'):
             setattr(self, qmethod, self._query_wrapper(qmethod))
 
-
     def __str__(self):
         """ String representation
         """
-        template = 'Metadata record {0}, tagged with {1}'
+        template = 'XJson record {0}, tagged with {1}'
         short_tag = qname_str(self.namespaces.shorten(self.root.tag))
         return template.format(self.ident, short_tag)
 
@@ -194,12 +167,38 @@ class Metadata(object):
         """
         return self.findall(query, unwrap=True)
 
+    @classmethod
+    def from_xml(cls, xml, namspace_handling='shorten'):
+        """ Read some XML containing a xjson record
+
+            Parameters:
+                xml - either a handle to an open xml file, or a string of XML
+                namespace_handling - how to handle XML namespaces. Optional, 
+                defaults to 'shorten'.
+
+            Returns:
+                the new XJson instance containing the record
+        """
+        # Initialize tree and XML namespaces
+        if not isinstance(xml, io.IOBase):
+            try:
+                xml = io.BytesIO(xml.encode('utf-8'))
+            except AttributeError:
+                # We already have a bytestring so don't bother encoding it
+                xml = io.BytesIO(xml)
+
+        # Parse xjson using JSON mapping
+        parser = etree.XMLParser(
+            target=JSONTarget(namespace_handling=namespace_handling))
+        result, context = etree.XML(fhandle.read(), parser)
+        return cls(body, context)
+
     @property
     def namespaces(self):
         """ Get the current namespace dictionary
         """
         if self._update_namespaces:
-            self._namespaces.harvest_namespaces(self.root) 
+            self._namespaces.harvest_namespaces(self.root)
             self._update_namespaces = False
         return self._namespaces
 
@@ -221,12 +220,12 @@ class Metadata(object):
             self.root.set(attribute, value)
 
     def get_children(self):
-        """ Return an iterable over the children of the metadata element
+        """ Return an iterable over the children of the xjson element
         """
         return (self._wrap_element(c) for c in self.root.getchildren())
 
     def get_parent(self):
-        """ Return the parent node of the given metadata element
+        """ Return the parent node of the given xjson element
         """
         return self._wrap_element(self.root.getparent())
 
@@ -244,13 +243,13 @@ class Metadata(object):
             pass
 
     def add_subelement(self, tag, text=None, **attributes):
-        """ Add and return a metadata element with given attributes
-            and text to the metadata instance.
+        """ Add and return a xjson element with given attributes
+            and text to the xjson instance.
 
             Parameters:
-                tag - the tag of the new metadata element. This can use
+                tag - the tag of the new xjson element. This can use
                     the currently defined namespaces (which will be copied
-                    into the new Metadata instance).
+                    into the new XJson instance).
                 text - the text to be associated with the element
                 **attributes - key-value pairs to be associated with this content.
         """
@@ -263,25 +262,25 @@ class Metadata(object):
         self._update_namespaces = True
         return self._wrap_element(elem)
 
-    def append(self, metadata):
-        """ Add a preexisting metadata instance
+    def append(self, xjson):
+        """ Add a preexisting xjson instance
         """
-        self.root.append(metadata.root)
-        for namespace_uri in metadata.namespaces.values():
+        self.root.append(xjson.root)
+        for namespace_uri in xjson.namespaces.values():
             self.namespaces.add_from_uri(namespace_uri)
 
     def extend(self, *obj):
-        """ Add and return metadata elements to the tree
+        """ Add and return xjson elements to the tree
 
             For details on the allowable object types that can be converted to
-            to Metadata element instances, see the docstring for `as_metadata`
+            to XJson element instances, see the docstring for `as_xjson`
         """
         for obj in objs:
-            self.append(as_metadata(obj))
+            self.append(as_xjson(obj))
         self._update_namespaces = True
 
     def register(self):
-        """ Register this metadata instance with the Metadata registry
+        """ Register this xjson instance with the XJson registry
         """
         # Register yourself with the registry if required
         self.registry.register(self)
@@ -294,16 +293,16 @@ class Metadata(object):
                     Optional, defaults to 2.
 
             Returns:
-                a string reprentation of the metadata tree
+                a string reprentation of the xjson tree
         """
         return yamlify(self.root, self.namespaces,
                        indent_width=indent_width)
 
     def _query_wrapper(self, method):
-        """ Wrapper around query methods for the metadata instance
+        """ Wrapper around query methods for the xjson instance
 
             Constructs a namespace dictionary to make it easier to run
-            concise query strings. Also wraps the results as a Metadata
+            concise query strings. Also wraps the results as a XJson
             instance.
         """
         def _query(*qargs, unwrap=False, **qkwargs):
@@ -317,7 +316,7 @@ class Metadata(object):
 
             # Get results
             results = getattr(self.root, method)(*qargs, **qkwargs)
-            
+
             # Wrap results and return
             try:
                 try:
@@ -340,7 +339,7 @@ class Metadata(object):
                     return self._wrap_element(results)
 
             except AttributeError:
-                # Something about making a metadata instance has failed, so
+                # Something about making a xjson instance has failed, so
                 # just return the results
                 return results
 
@@ -350,9 +349,9 @@ class Metadata(object):
         return _query
 
     def _wrap_element(self, elem):
-        """ Wrap an element as a Metadata instance without having to update namespace
+        """ Wrap an element as a XJson instance without having to update namespace
             definitions.
         """
-        md = Metadata(elem=elem, namespaces=self.namespaces)
-        md._update_namespaces = False
-        return md
+        xj = XJson(elem=elem, namespaces=self.namespaces)
+        xj._update_namespaces = False
+        return xj

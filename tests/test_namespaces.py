@@ -9,7 +9,7 @@
 
 from __future__ import print_function, division
 
-from xjson.metadata.namespaces import NamespaceMap
+from xjson.namespaces import NamespaceMap
 
 import unittest
 
