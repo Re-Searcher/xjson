@@ -115,7 +115,7 @@ class JSONLDTarget(object):
                 elem = elem[contained_type]
 
                 # Move container out to context (if it hasn't already)
-                if isinstance(tag, str):
+                if self.context.get(tag) is None:
                     self.context[tag] = {'@id': container_type,
                                          '@type': contained_type,
                                          '@container': '@set'}
@@ -134,7 +134,7 @@ class JSONLDTarget(object):
                         elem = elem['#attributes'][attr_keys[0]]
 
                     # Move container out to context (if it hasn't already)
-                    if isinstance(self.context[tag], str):
+                    if self.context.get(tag) is None:
                         self.context[tag] = {'@id': self.context[tag],
                                              '@type': '@id'}
                 except KeyError:

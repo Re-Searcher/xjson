@@ -132,13 +132,20 @@ class JSONLDContext(object):
                 return merge_namespace_and_tag('{{{0}}}{1}'.format(
                                                 namespace, localname))
             else:
-                import pdb; pdb.set_trace()
                 raise err
 
     def __setitem__(self, tag, context):
         """ Set the context associated with a tag
         """
         self._context[tag] = context
+
+    def get(self, tag):
+        """ Try to get a tag, returning None if not found
+        """
+        try:
+            return self[tag]
+        except KeyError:
+            return None
 
     def process(self, tag):
         """ Process a tag, handling the namespace in the correct way
