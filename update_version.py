@@ -40,8 +40,6 @@ def update_version():
             ver = stdout.decode("utf-8", "ignore").strip().split('-')
             if len(ver) > 1:
                 ver = ver[0] + '.dev' + ver[1]
-            elif len(ver) == 1:
-                ver = "0.0.0.dev"
             else:
                 ver = ver[0]
     except EnvironmentError:
