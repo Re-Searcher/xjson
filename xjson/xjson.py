@@ -15,7 +15,6 @@ from .registry import XJsonRegistry
 from .namespaces import NamespaceMap
 from .xjson_namespace import XJSON_NAMESPACE
 from .json_target import JSONLDTarget
-from .json_context import JSONLDContext
 
 from lxml import etree
 import io
@@ -194,7 +193,7 @@ class XJson(object):
         parser = etree.XMLParser(
             target=JSONLDTarget(namespace_handling=namespace_handling))
         result, context = etree.XML(xml.read(), parser)
-        return cls(body, context)
+        return cls(result, context)
 
     @property
     def namespaces(self):
