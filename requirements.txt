@@ -1,2 +1,2 @@
 lxml
-httmock
+jsonpath_rw
