@@ -9,5 +9,7 @@
 
 import unittest
 
+from . import test_xjson, test_namespaces
+
 if __name__ == '__main__':
     unittest.main()
