@@ -8,7 +8,7 @@
 
 from .namespaces import NamespaceMap
 
-from lxml import etree
+from lxml.etree import QName
 
 def merge_namespace_and_tag(tag):
     """ Merge a tag with its namespace
@@ -18,7 +18,7 @@ def merge_namespace_and_tag(tag):
     """
     try:
         # Try to merge the namespace and the localname
-        qname = etree.QName(tag)
+        qname = QName(tag)
         if qname.namespace:
             if qname.namespace.count(':') > 1: # We have a URN
                 seperator = ':'
@@ -73,10 +73,12 @@ class JSONLDContext(object):
 
     def __init__(self, namespace_handling=None, mapping=None):
         super(JSONLDContext, self).__init__()
-        self.nsmap = NamespaceMap()
-        self.nslist = set()
 
         # Set up context data and pass through iteration stuff
+        if mapping is not None:
+            self.mapping = NamespaceMap(**mapping)
+        else:
+            self.mapping = NamespaceMap()
         self._context = {}
         for attr in ('values', 'keys', 'items'):
             setattr(self, attr, getattr(self._context, attr))
@@ -86,38 +88,32 @@ class JSONLDContext(object):
         if namespace_handling is None:
             namespace_handling = 'none'
         if namespace_handling not in allowed_values:
-            raise ValueError("Invalid namespace handling option " +
-                             "{0}, allowed values are {1}".format(
-                                  namespace_handling, allowed_values))
+            msg = ("Invalid namespace handling option " +
+                   "{0}, allowed values are {1}")
+            raise ValueError(msg.format(namespace_handling, allowed_values))
 
         # Assign the correct method to process
         self._process = getattr(self, '_process_' + namespace_handling)
         self.namespace_handling = namespace_handling
 
-        # Copy in initialization
-        if mapping:
-            for key, value in mapping.items():
-                self[key] = value
-
     def __str__(self):
         """ Representation for use in a JSON-LD document
         """
         # Declare as a context
-        rep = "'@context': {\n"
+        rep = '"@context": {\n'
 
         # We sort to make sure that namespace declarations occur first
         # so 'ns' key comes before 'ns:foo'
-        for key in sorted(self._context.keys()):
-            value = self._context[key]
-            rep += '    {0}: {1},\n'.format(key, value)
-        rep += '}'
+        rep += ',\n'.join('    "{0}": "{1}"'.format(k, self._context[k])
+                          for k in sorted(self._context.keys()))
+        rep += '\n}'
         return rep
 
     def __repr__(self):
         """ Representation of JSONLDContext
         """
-        return 'JSONLDContext(namespace_handling={1}, mapping={0})'.format(
-                   str(self._context), self.namespace_handling)
+        tmpl = 'JSONLDContext(namespace_handling={1}, mapping={0})'
+        return tmpl.format(str(self._context), self.namespace_handling)
 
     def __getitem__(self, tag):
         """ Get the context associated with a given tag
@@ -129,8 +125,8 @@ class JSONLDContext(object):
             if is_qname(tag):
                 namespace, localname = tag.split(':')
                 namespace = self._context[namespace]
-                return merge_namespace_and_tag('{{{0}}}{1}'.format(
-                                                namespace, localname))
+                return merge_namespace_and_tag(
+                    '{{{0}}}{1}'.format(namespace, localname))
             else:
                 raise err
 
@@ -155,7 +151,7 @@ class JSONLDContext(object):
     def _process_identify(self, tag):
         """ Process a tag, identifying any namespaces
         """
-        self.nsmap.add_from_tag(tag)
+        self.mapping.add_from_tag(tag)
         return merge_namespace_and_tag(tag)
 
     def _process_none(self, tag):
@@ -167,18 +163,18 @@ class JSONLDContext(object):
         """ Process a tag, removing namespaces to the context but
             leaving a shortened version of the namespace in the tag
         """
-        short_tag = self.nsmap.shorten(tag)
+        short_tag = self.mapping.shorten(tag)
         if is_qname(short_tag):
             namespace, _ = short_tag.split(':')
-            self[namespace] = self.nsmap[namespace]
+            self[namespace] = self.mapping[namespace]
         return short_tag
 
     def _process_remove(self, tag):
         """ Process a tag, removing namespaces to the context
         """
-        self.nsmap.add_from_tag(tag)
+        self.mapping.add_from_tag(tag)
         try:
-            qname = etree.QName(tag)
+            qname = QName(tag)
             self[qname.localname] = merge_namespace_and_tag(tag)
             tag = qname.localname
         except ValueError:

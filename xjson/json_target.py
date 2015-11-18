@@ -79,6 +79,8 @@ class JSONLDTarget(object):
             self.current_element['#data'] = data
 
     def end(self, tag):
+        """ Finish generating the currently building object
+        """
         # Pop off currently building element
         tag, elem = self.stack.pop()
         if '#data' in elem.keys():
@@ -93,7 +95,7 @@ class JSONLDTarget(object):
             else:
                 elem = dict(elem)
 
-        elif not(elem):
+        elif not elem:
             # If element is empty, replace with None
             elem = None
 
