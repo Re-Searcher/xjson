@@ -24,9 +24,6 @@ with open('requirements.txt') as fhandle:
 from update_version import update_version, Version, get_version
 update_version()
 
-# Update mocks
-from tests.mocks.update import UpdateMocks
-
 ## PACKAGE INFORMATION
 setup(
     # XJson
@@ -63,7 +60,6 @@ setup(
     },
     test_suite='tests',
     cmdclass={
-        'update_version': Version,
-        'update_mocks': UpdateMocks
+        'update_version': Version
     }
 )
